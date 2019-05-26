@@ -1,0 +1,2 @@
+To Launch an Instance:
+aws ec2 run-instances --image-id ami-5b673c34 --count 1 --instance-type t2.micro --key-name CM-Servers --security-group-ids sg-07f8ca6a --subnet-id subnet-de7b2eb6
