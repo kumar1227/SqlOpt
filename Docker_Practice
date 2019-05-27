@@ -1,0 +1,6 @@
+docker command to search images:
+--> docker search <ImageName>
+docker command to run image in background:
+--> docker run -d <ImageName:Version>
+dcoker command to get container details:
+--> docker inspect <ImageId/ImageFriendlyName>
