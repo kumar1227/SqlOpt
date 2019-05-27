@@ -2,5 +2,13 @@ docker command to search images:
 --> docker search <ImageName>
 docker command to run image in background:
 --> docker run -d <ImageName:Version>
-dcoker command to get container details:
+docker command to get container details:
 --> docker inspect <ImageId/ImageFriendlyName>
+docker command to check the container log:
+--> docker logs <ImageId/ImageFriendlyName>
+docker command to bind host port and container port:
+--> docker run -d --name redisHostPort -p <HostPort>:<ContainerPort> <Image>
+Command to bind random host port with container port:
+--> docker run -d --name redisHostPort -p <ContainerPort> <Image>
+Command to mount the host volume with the container volume and also bind system port with container port:
+--> docker run -d --name redisMapped -p 6379:6379 -v "$PWD/data":/data redis:latest
