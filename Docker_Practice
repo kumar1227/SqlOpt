@@ -12,3 +12,5 @@ Command to bind random host port with container port:
 --> docker run -d --name redisHostPort -p <ContainerPort> <Image>
 Command to mount the host volume with the container volume and also bind system port with container port:
 --> docker run -d --name redisMapped -p 6379:6379 -v "$PWD/data":/data redis:latest
+Command to run the create image using the Dockerfile:
+--> docker build -t <ImageName>:<Tag> .
