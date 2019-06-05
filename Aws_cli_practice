@@ -1,2 +1,11 @@
 To Launch an Instance:
 aws ec2 run-instances --image-id ami-5b673c34 --count 1 --instance-type t2.micro --key-name CM-Servers --security-group-ids sg-07f8ca6a --subnet-id subnet-de7b2eb6
+
+To Describe Instancce:
+aws ec2 describe-instances
+
+Create AMI Image:
+aws ec2 create-image --instance-id i-03e67385c1247370a --name "Docker-Ubuntu-Image" --no-reboot
+
+Copy AMI from one region to another region:
+aws ec2 copy-image --source-image-id ami-0cabf432ff731edf0 --source-region ap-south-1 --region us-east-1 --name "Ubuntu-docker-image"
