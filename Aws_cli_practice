@@ -9,3 +9,6 @@ aws ec2 create-image --instance-id i-03e67385c1247370a --name "Docker-Ubuntu-Ima
 
 Copy AMI from one region to another region:
 aws ec2 copy-image --source-image-id ami-0cabf432ff731edf0 --source-region ap-south-1 --region us-east-1 --name "Ubuntu-docker-image"
+
+Start the stopped instance:
+aws ec2 start-instances --instance-ids i-03e67385c1247370a
