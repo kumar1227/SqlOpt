@@ -1,0 +1,159 @@
+@Library('pipelineLibrary')
+import com.statestreet.gitpipeline.*
+import com.statestreet.util.*
+
+//Get the node label from global configuration
+def LinuxNode=manager.envVars["LinuxNode"]
+timestamps {
+    node(LinuxNode) {
+        def scmInfo
+        def buildUser=params.buildRequesterUserId
+        def version=params.version
+        def buildAction=params.buildAction
+        def workitem=params.workitem
+        def ci_env=manager.envVars["CI_Env"]
+        def artifactoryServerName = 'SDPART'
+        def bundle_env="REL"
+        def relBranch=params.gitBranch
+        def ar_url=manager.envVars["ARTIFACTORY_URL"]
+		def JOB_NAME="${env.JOB_NAME}"
+		def build_slave="${env.NODE_NAME}"
+		def buildUUID="${env.BUILD_TAG}"
+		def build_number = "${env.BUILD_NUMBER}"
+		def AMAELK=manager.envVars["AMAELK"]		
+        
+        stage('Initialization') {
+            try{
+                def initObj = new com.statestreet.gitpipeline.init.Initialization(steps)
+                initObj.initValidation(version,buildUser,workitem,scmEngine,relBranch,ci_env)
+                
+                //Validate version is exists in artifactory
+                initObj.validateVersionExistsInAR(version,ci_env,ar_url,bundle_env,artifactoryEngine)
+             } catch(err) {
+    					throw err
+    	    }
+        }
+        
+        stage('Source Checkout') {
+             try{
+                def checkoutObj = new com.statestreet.gitpipeline.checkout.CheckOut(steps)
+                scmInfo = checkoutObj.getGitObject(scmEngine,buildUser,version,build_number,workitem,ci_env,relBranch,bundle_env)
+             } catch(err) {
+    					throw err
+    	    }
+        }
+        
+        stage('Download Build Dependencies'){
+            try{
+                def downloadDependecies = new com.statestreet.gitpipeline.artifactdwnload.DependencyDownload(Artifactory,steps)
+		        downloadDependecies.downloadDependencies(dependencyDownloadEngine, artifactoryServerName, ci_env,version)
+            } catch(err) {
+    					throw err
+    	    }
+        }
+        
+        stage('Build') {
+            def timeNow = new Date()
+		    def startTime = timeNow.format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+            try{
+                def buildObj = new com.statestreet.gitpipeline.build.BuildEngine(steps)
+                buildObj.buildStage(buildEngine, JOB_NAME, build_slave, buildUUID, ar_url, bundle_env, startTime, build_number, AMAELK)
+            } catch(err) {
+    					throw err
+    	    }
+        }
+       
+        stage('Publish Artifacts'){
+            try {
+                def artiObj = new com.statestreet.gitpipeline.artifactoryUpload.UploadArtifactory(Artifactory,steps)
+                artiObj.artifactoryStage(artifactoryEngine,artifactoryServerName,build_number,version,ci_env,bundle_env)
+                } catch (err) {
+                    throw err
+                }
+        }
+        
+        stage('Sonar'){
+           def timeNow = new Date()
+		    def startTime = timeNow.format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+            def sonarObj = new com.statestreet.gitpipeline.sonar.SonarEngine(steps)
+            try {
+                sonarObj.performSonarScan(sonarEngine,name,bundle_env,params)
+            } catch (err) {
+                    throw err
+            }
+             //Push sonar mastrix
+             if (!sonarEngine.model.id.contains("Auxiliary_Sonar_None")){
+                try{
+                    int app_index="${env.BUILD_URL}".indexOf("/job/");
+    		        def app_code="${env.BUILD_URL}".substring(app_index+5, app_index+8)   //params.appCode
+                    def ELK_URL=manager.envVars["ELK_URL"]
+                    def ELK_Sonar_Index=manager.envVars["ELK_Sonar_Index"]
+                    def sonar_URL
+					if(bundle_env == "DEV"){
+						sonar_URL=manager.envVars["SONAR_URL_LOCAL"]
+					}
+					
+					if(bundle_env == "REL"){
+						sonar_URL=manager.envVars["SONAR_URL_CERT"]
+					}
+                    
+                    def ELK = ELK_URL.toString()+ELK_Sonar_Index.toString()
+                    env.SONAR_URL=sonar_URL
+    			    env.sonarPrjKey=sonarEngine.sonarProjectKey+"-SDP"
+                    
+                    def pushSonarObj = new com.statestreet.gitpipeline.sonar.GetSonarMatrix(steps)
+                    pushSonarObj.GetMatrix(ELK,app_code,sonar_URL,env.sonarPrjKey, JOB_NAME, build_slave, buildUUID, ar_url, bundle_env, AMAELK, startTime, build_number, version, sonarEngine.appEmailID)
+                    
+                 } catch(err) {
+        					throw err
+        	    }
+             }
+        }
+        
+
+        stage('Tag Creation'){
+            try{
+                def tagObj = new com.statestreet.gitpipeline.createtag.CreateGitTagOnRelease(steps)
+                tagObj.createTagOnRelease(scmInfo,build_number,ci_env)
+            } catch(err) {
+    					throw err
+    	    }
+        }
+        
+		stage('Bundle'){
+		    if(buildAction == "build_bundle"){
+				def timeNow = new Date()
+				def startTime = timeNow.format("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
+				println("---------------START-Cloud Bundling---------------")
+				try{
+					def imgVersion = params.imageVersion
+					def imageDescription=params.imageDescription
+					def bundleObj = new com.statestreet.gitpipeline.bundling.CloudImageInsertIDFCall(steps)
+					bundleObj.insertImageIDFCall(bundleEngine, version, imgVersion, buildUser, imageDescription, ar_url, bundle_env, ci_env, JOB_NAME, build_slave, buildUUID, startTime, build_number, AMAELK)
+				}
+				catch(err) {
+							throw err
+				}
+				println("---------------END-Cloud Bundling---------------") 
+			}
+        }
+        
+        stage('Downstream Job'){
+            try{
+                def buildOtherjob = new com.statestreet.gitpipeline.triggerjob.ConditionalBuild(steps)
+                buildOtherjob.runConditionalBuild(triggerEngine)
+            } catch(err) {
+    					throw err
+    	    }
+        }
+         
+        stage('Clean'){
+            try{
+                def cleanObj = new com.statestreet.gitpipeline.cleanup.CleanUp(steps)
+                cleanObj.cleanUpWorkspace()
+            } catch(err) {
+    					throw err
+    	    }
+        }
+    }
+}
