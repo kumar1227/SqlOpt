@@ -35,3 +35,20 @@ EXPOSE 3000
 #CMD: docker build -t my-nodejs-app:latest
 #CMD: docker run -d --name my-running-app -p 3000:3000 my-nodejs-app
 
+#Topic 4: .dockerignore
+FROM alpine
+ADD . /app
+COPY cmd.sh /cmd.shl
+CMD ["sh", "-c", "/cmd.sh"]
+#CMD: docker build -t password .
+#CMD: docker run password ls /app
+#OUTPUT:
+#Dockerfile
+#cmd.sh
+#passwords.txt
+echo "passwords.txt" >> .dockerignore
+#CMD: docker build -t nopassword .
+#CMD: docker run nopassword ls /app
+#OUTPUT:
+#Dockerfile
+#cmd.sh
