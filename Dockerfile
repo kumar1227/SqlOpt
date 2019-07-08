@@ -52,3 +52,14 @@ echo "passwords.txt" >> .dockerignore
 #OUTPUT:
 #Dockerfile
 #cmd.sh
+
+#Topic 5: Data Container
+#CMD: docker create -v /config --name dataContainer busybox
+#CMD: docker cp config.conf dataContainer:/config/
+#Lauching an Ubuntu container using "--volumes-from <dataContainer>" option to mount volume of other container
+#CMD: docker run --volumes-from dataContainer ubuntu ls /config
+#Exporting data container to tar file
+#CMD: docker export dataContainer > dataContainer.tar
+#Importing data container from tar file
+#CMD: docker import dataContainer.tar
+#CMD docker tag <ImageID> <TagName>:<Verion>
