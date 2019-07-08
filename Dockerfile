@@ -63,3 +63,5 @@ echo "passwords.txt" >> .dockerignore
 #Importing data container from tar file
 #CMD: docker import dataContainer.tar
 #CMD docker tag <ImageID> <TagName>:<Verion>
+
+#Topic 6: Creating networks b/w contianers using links
